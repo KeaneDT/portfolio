@@ -1,0 +1,74 @@
+import { Engine } from './engine/index.js';
+import { appendHeroClone } from './site/hero-clone.js';
+import { createReel } from './site/reel.js';
+
+const params = new URLSearchParams(location.search);
+const canvas = document.getElementById('metal');
+const root = document.documentElement;
+const reelRoot = document.getElementById('reel');
+appendHeroClone(reelRoot);
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let calm = reduced;
+try {
+  const saved = localStorage.getItem('calm');
+  if (saved !== null) calm = saved === '1';
+} catch {}
+
+const engine = new Engine(canvas, { calm, debug: params.has('debug'), preserve: params.has('debug') });
+if (!engine.ok) {
+  root.classList.add('no-gl');
+  console.warn('[metal] disabled:', engine.error);
+}
+
+const reel = createReel(reelRoot);
+
+// DOM elements the layouts hug
+engine.bind('cards', document.querySelectorAll('#cards .card'));
+engine.bind('thread', document.querySelectorAll('#tl-line'));
+
+// calm toggle
+const calmBtn = document.getElementById('calm');
+const paintCalm = () => calmBtn.setAttribute('aria-pressed', String(engine.calm));
+paintCalm();
+calmBtn.addEventListener('click', () => {
+  engine.setCalm(!engine.calm);
+  paintCalm();
+  try { localStorage.setItem('calm', engine.calm ? '1' : '0'); } catch {}
+});
+
+// nav
+document.querySelectorAll('[data-go]').forEach((a) => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    reel.scrollToSection(Number(a.dataset.go));
+  });
+});
+
+// pointer: mouse is "present" while inside the window, touch only while a finger is down
+let down = false;
+const setPtr = (e, present) => engine.setPointer(e.clientX, e.clientY, present, down);
+addEventListener('pointermove', (e) => setPtr(e, e.pointerType !== 'touch' || down), { passive: true });
+addEventListener('pointerdown', (e) => { down = true; setPtr(e, true); }, { passive: true });
+addEventListener('pointerup', (e) => { down = false; setPtr(e, e.pointerType !== 'touch'); }, { passive: true });
+addEventListener('pointercancel', () => { down = false; engine.setPointer(0, 0, false, false); }, { passive: true });
+document.addEventListener('pointerleave', () => engine.setPointer(0, 0, false, false));
+
+// layout and resize
+const onResize = () => { engine.resize(); reel.measure(); };
+addEventListener('resize', onResize);
+new ResizeObserver(() => reel.measure()).observe(document.getElementById('reel'));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => reel.measure());
+
+// drive progress and reel jump from the engine frame so they stay in step with rendering
+const baseFrame = engine.frame.bind(engine);
+engine.frame = (now, dt, skip) => {
+  reel.tick();
+  engine.setProgress(reel.progress());
+  baseFrame(now, dt, skip);
+};
+
+engine.start();
+
+// debug hook for tests and screenshots only
+if (params.has('debug')) window.__molten = { engine, reel };

@@ -1,0 +1,13 @@
+# Local dependencies, build output, screenshots, and verification caches.
+site/node_modules/
+site/dist/
+site/shots/
+site/tmp/
+
+# Local handover report contains machine-specific paths.
+PHASE1-REPORT.md
+
+# Keep local environment values out of the published repository.
+.env
+.env.*
+!.env.example

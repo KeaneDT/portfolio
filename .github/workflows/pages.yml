@@ -1,0 +1,63 @@
+name: Deploy portfolio to GitHub Pages
+
+on:
+  push:
+    branches: [codex/portfolio, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Normalize Pages base URLs
+        shell: bash
+        env:
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          PAGES_BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          base_path="${PAGES_BASE_PATH%/}"
+          base_url="${PAGES_BASE_URL%/}"
+          printf 'PAGES_BASE_PATH=%s/\n' "$base_path" >> "$GITHUB_ENV"
+          printf 'SITE_URL=%s/\n' "$base_url" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Build for GitHub Pages
+        working-directory: site
+        run: npm run build -- --base "$PAGES_BASE_PATH"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/dist
+
+      - name: Deploy Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v5

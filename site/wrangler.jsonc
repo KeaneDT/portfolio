@@ -1,0 +1,12 @@
+{
+  // Cloudflare Workers static assets: no Worker script needed, just the built folder.
+  // Deploy:  npm run deploy   (first time: npx wrangler login)
+  // Then in the Cloudflare dashboard: Workers & Pages > this worker > Settings > Domains & Routes > Add custom domain > keanetravasso.com
+  "name": "keanetravasso-portfolio",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  }
+}

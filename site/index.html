@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Keane Travasso — Portfolio</title>
+  <meta name="description" content="Portfolio site of Keane Travasso." />
+  <link rel="canonical" href="%SITE_URL%" />
+  <meta name="theme-color" content="#07080a" />
+  <meta property="og:title" content="Keane Travasso" />
+  <meta property="og:description" content="Portfolio site of Keane Travasso." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="%SITE_URL%" />
+  <meta property="og:image" content="%SITE_URL%og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Keane Travasso portfolio preview" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Keane Travasso" />
+  <meta name="twitter:description" content="Portfolio site of Keane Travasso." />
+  <meta name="twitter:image" content="%SITE_URL%og.png" />
+  <meta name="twitter:image:alt" content="Keane Travasso portfolio preview" />
+  <link rel="preload" href="/fonts/InterTight-Variable-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/src/styles/tokens.css" />
+  <link rel="stylesheet" href="/src/styles/base.css" />
+  <link rel="stylesheet" href="/src/styles/sections.css" />
+</head>
+<body>
+  <a class="skip" href="#work">Skip to work</a>
+  <canvas id="metal" aria-hidden="true"></canvas>
+
+  <header class="nav">
+    <a class="nav__brand" href="#top" data-go="0">KT</a>
+    <nav class="nav__links" aria-label="Primary">
+      <a href="#about" data-go="1">About</a>
+      <a href="#work" data-go="2">Work</a>
+      <a href="#path" data-go="3">Path</a>
+      <a href="#notes" data-go="4">Notes</a>
+      <a href="#contact" data-go="5">Contact</a>
+    </nav>
+    <button class="calm" id="calm" type="button" aria-pressed="false" title="Reduce motion">Calm</button>
+  </header>
+
+  <main id="reel">
+    <section class="sec sec--intro" id="top" data-section="0">
+      <div class="intro">
+        <p class="eyebrow">[Role] · [City]</p>
+        <h1 class="display">Keane<br />Travasso</h1>
+        <p class="lede">[One sentence on what you make and who it is for.]</p>
+      </div>
+      <p class="cue" aria-hidden="true">Scroll</p>
+    </section>
+
+    <section class="sec sec--about" id="about" data-section="1">
+      <div class="about">
+        <p class="eyebrow">About</p>
+        <h2 class="title">[A sharp one-liner that is not a job title.]</h2>
+        <p class="body">[Two or three sentences. What you care about, how you work, what makes your work different. Keep it human.]</p>
+        <ul class="facts">
+          <li><span>Focus</span> [Discipline one, two]</li>
+          <li><span>Tools</span> [Tool, tool, tool]</li>
+          <li><span>Currently</span> [Where you are or what you are building]</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="sec sec--work" id="work" data-section="2">
+      <header class="sec__head">
+        <p class="eyebrow">Selected work</p>
+        <h2 class="title">Four things worth your time</h2>
+      </header>
+      <div class="cards" id="cards">
+        <a class="card" href="%BASE_URL%case-study.html?p=1"><span class="card__n">01</span><h3>[Project one]</h3><p>[One line: problem, your role, outcome.]</p><span class="card__tag">[Tag] · [Year]</span></a>
+        <a class="card" href="%BASE_URL%case-study.html?p=2"><span class="card__n">02</span><h3>[Project two]</h3><p>[One line: problem, your role, outcome.]</p><span class="card__tag">[Tag] · [Year]</span></a>
+        <a class="card" href="%BASE_URL%case-study.html?p=3"><span class="card__n">03</span><h3>[Project three]</h3><p>[One line: problem, your role, outcome.]</p><span class="card__tag">[Tag] · [Year]</span></a>
+        <a class="card" href="%BASE_URL%case-study.html?p=4"><span class="card__n">04</span><h3>[Project four]</h3><p>[One line: problem, your role, outcome.]</p><span class="card__tag">[Tag] · [Year]</span></a>
+      </div>
+    </section>
+
+    <section class="sec sec--path" id="path" data-section="3">
+      <div class="path">
+        <p class="eyebrow">Path</p>
+        <h2 class="title">How I got here</h2>
+        <div class="tl">
+          <span class="tl__line" id="tl-line" aria-hidden="true"></span>
+          <ol>
+            <li><time>[Year – Now]</time><h3>[Role, Company]</h3><p>[One line on the outcome you drove.]</p></li>
+            <li><time>[Year – Year]</time><h3>[Role, Company]</h3><p>[One line on the outcome you drove.]</p></li>
+            <li><time>[Year – Year]</time><h3>[Role, Company]</h3><p>[One line on the outcome you drove.]</p></li>
+            <li><time>[Year]</time><h3>[Education / Certification]</h3><p>[One line.]</p></li>
+          </ol>
+        </div>
+        <a class="link" href="%BASE_URL%resume.html">Full résumé →</a>
+      </div>
+    </section>
+
+    <section class="sec sec--drip" id="notes" data-section="4">
+      <div class="notes">
+        <p class="eyebrow">Notes</p>
+        <h2 class="title">Things I am figuring out</h2>
+        <ul>
+          <li>[Short note, a belief or lesson, one sentence.]</li>
+          <li>[Short note, a belief or lesson, one sentence.]</li>
+          <li>[Short note, a belief or lesson, one sentence.]</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="sec sec--contact" id="contact" data-section="5">
+      <div class="contact">
+        <p class="eyebrow">Contact</p>
+        <h2 class="display display--sm">Let's make<br />something.</h2>
+        <a class="mail" href="mailto:hello@keanetravasso.com">hello@keanetravasso.com</a>
+        <p class="socials"><a href="#">LinkedIn</a><a href="#">GitHub</a><a href="#">[Other]</a></p>
+      </div>
+    </section>
+
+  </main>
+
+  <noscript><style>#metal{display:none}</style></noscript>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

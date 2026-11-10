@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://keanetravasso.com/sitemap.xml
