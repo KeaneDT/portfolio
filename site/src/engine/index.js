@@ -20,7 +20,7 @@ export class Engine {
     this.surface = new SurfaceWaves();
     this.orb = new OrbSim();
     this.quality = new Quality({ min: 0.5, max: opts.maxScale ?? 1, start: opts.startScale ?? 0.85 });
-    this.progress = 0;      // continuous section index, wraps in [0, N)
+    this.progress = 0;      // continuous section index in [0, N - 1]
     this.calm = !!opts.calm;
     this.ptr = { x: 0, y: 0, present: false, down: false, px: 0, py: 0 };
     this.bound = {};        // key -> Element[]
@@ -30,7 +30,6 @@ export class Engine {
     this.running = false;
     this.cssW = 1; this.cssH = 1;
     this.scrollAngle = 0;
-    this._pPrev = 0; this._wraps = 0;
     this._raf = 0;
     this.sim.setCalm(this.calm);
     this._onVis = () => { if (document.hidden) this.stop(); else this.start(); };
@@ -109,9 +108,9 @@ export class Engine {
     // Calm keeps the authored paths still; pointer and spring motion are reduced by the sim.
     const ctx = { aspect, t: this.calm ? 0 : this.time, mobile: aspect < 0.9, rects: this.rects };
 
-    const N = this.N;
-    const p = ((this.progress % N) + N) % N;
-    const i = Math.floor(p), j = (i + 1) % N;
+    const lastScene = this.N - 1;
+    const p = Math.max(0, Math.min(this.progress, lastScene));
+    const i = Math.floor(p), j = Math.min(i + 1, lastScene);
     const A = evalLayout(i, ctx);
     const B = i === j ? A : evalLayout(j, ctx);
     blendInto(A, B, p - i, this.sim, this.orb);
@@ -125,11 +124,7 @@ export class Engine {
     this.sim.step(dt, world);
     this.surface.step(dt, { calm: this.calm, ripples: this.sim.ripples });
     this.orb.step(dt, world, this.ptr.down, this.calm);
-    // unwrap the looping progress so the environment never snaps back when the reel wraps
-    const d = p - this._pPrev;
-    if (d < -N / 2) this._wraps++; else if (d > N / 2) this._wraps--;
-    this._pPrev = p;
-    this.scrollAngle += ((p + this._wraps * N) * 0.9 - this.scrollAngle) * Math.min(1, dt * 6); // lagged so reflections glide
+    this.scrollAngle += (p * 0.9 - this.scrollAngle) * Math.min(1, dt * 6); // lagged so reflections glide
 
     if (!skipRender) {
       this.renderer.render({

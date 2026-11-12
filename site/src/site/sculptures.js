@@ -4,7 +4,7 @@ const pitchLimit = 0.45;
 const clamp = (value, limit) => Math.min(limit, Math.max(-limit, value));
 
 export function initSculptures({ engine, calm = false }) {
-  if (!engine.ok) return { setCalm() {}, setPaused() {}, destroy() {} };
+  if (!engine.ok) return { updateForRender() {}, setCalm() {}, setPaused() {}, destroy() {} };
 
   const rects = new Float32Array(16);
   const poses = new Float32Array(16);
@@ -14,7 +14,7 @@ export function initSculptures({ engine, calm = false }) {
   })).filter(({ model }) => Number.isInteger(model) && model >= 0 && model < bases.length);
   const listeners = new AbortController();
   const { signal } = listeners;
-  let paused = false, ready = false, dirty = true, raf = 0, previous = 0;
+  let paused = false, ready = false, previous = 0;
 
   function syncControls() {
     document.documentElement.classList.toggle('sculptures-ready', ready);
@@ -46,16 +46,11 @@ export function initSculptures({ engine, calm = false }) {
       rects[i + 2] = slot.visible ? rect.width / (2 * height) : 0;
       rects[i + 3] = slot.visible ? rect.height / (2 * height) : 0;
     }
-    dirty = false;
   }
 
-  function queue() {
-    if (!raf && ready && !paused && !document.hidden) raf = requestAnimationFrame(frame);
-  }
-
-  function frame(now) {
-    raf = 0;
-    if (dirty) measure();
+  function updateForRender(now) {
+    if (!ready || paused) return;
+    measure();
     const dt = previous ? Math.min((now - previous) / 1000, 0.05) : 0;
     let visible = false;
     for (const slot of slots) {
@@ -76,13 +71,9 @@ export function initSculptures({ engine, calm = false }) {
     }
     engine.setSculptures(rects, poses);
     previous = visible && !calm ? now : 0;
-    if (previous) queue();
   }
 
-  function invalidate() { dirty = true; queue(); }
   function stop() {
-    cancelAnimationFrame(raf);
-    raf = 0;
     previous = 0;
     for (const slot of slots) release(slot);
   }
@@ -157,35 +148,27 @@ export function initSculptures({ engine, calm = false }) {
       slot.velocity = 0;
       slot.glide = 0;
       updateValue(slot);
-      queue();
     }, { signal });
   }
 
-  const observer = new ResizeObserver(invalidate);
-  observer.observe(document.documentElement);
-  for (const { el } of slots) observer.observe(el);
-  window.addEventListener('resize', invalidate, { signal });
-  window.addEventListener('scroll', invalidate, { capture: true, passive: true, signal });
-  document.addEventListener('visibilitychange', () => document.hidden ? stop() : invalidate(), { signal });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); }, { signal });
   engine.canvas.addEventListener('webglcontextlost', () => { ready = false; stop(); syncControls(); }, { signal });
   engine.canvas.addEventListener('webglcontextrestored', () => {
     ready = engine.renderer.ok;
     for (const slot of slots) updateValue(slot);
     syncControls();
-    invalidate();
   }, { signal });
   ready = slots.length > 0;
   syncControls();
-  queue();
 
   return {
-    setCalm(enabled) { calm = !!enabled; stop(); syncControls(); queue(); },
-    setPaused(enabled) { paused = !!enabled; if (paused) stop(); else invalidate(); },
+    updateForRender,
+    setCalm(enabled) { calm = !!enabled; stop(); syncControls(); },
+    setPaused(enabled) { paused = !!enabled; if (paused) stop(); },
     destroy() {
       ready = false;
       stop();
       listeners.abort();
-      observer.disconnect();
       syncControls();
       rects.fill(0);
       engine.setSculptures(rects, poses);

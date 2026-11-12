@@ -1,5 +1,7 @@
 # 04 · Scroll, progress and the infinite reel
 
+This records the original infinite-reel design. The current homepage ends at Contact with a native Back to top link. Scene progress still interpolates between section centers and now stops at the first and last scenes.
+
 ## Native scroll, always
 The page uses real browser scrolling (not a virtual-scroll hijack). Reasons: accessibility, mobile momentum, find-in-page, anchor links, and it does not fight the user. Do **not** introduce Lenis / GSAP ScrollSmoother-style smoothing without a measured reason; if added, it must be disabled under reduced motion.
 

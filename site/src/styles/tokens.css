@@ -3,8 +3,10 @@
   --fg: #e9edf2;
   --mute: #8b94a1;
   --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.3);
   --glass: rgba(12, 14, 18, 0.82);
   --glass-copy: rgba(7, 8, 10, 0.94);
+  --glass-preview: rgba(7, 8, 10, 0.72);
   --selection-bg: #aab0b7;
   --selection-fg: #101216;
   --chrome: linear-gradient(180deg, #ffffff 0%, #c9d0da 38%, #6d7683 52%, #e9eef5 70%, #9aa3b0 100%);
@@ -19,6 +21,7 @@
   --metal-haze-bright: rgba(223, 230, 239, 0.12);
   --metal-glow: rgba(184, 197, 214, 0.06);
   --metal-glow-inset: rgba(184, 197, 214, 0.04);
+  --metal-preview: rgba(223, 230, 239, 0.035);
   --shadow-strong: rgba(0, 0, 0, 0.24);
   --shadow-soft: rgba(0, 0, 0, 0.16);
   --shadow-inset: rgba(255, 255, 255, 0.72);

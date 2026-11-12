@@ -1,5 +1,4 @@
 import { Engine } from './engine/index.js';
-import { appendHeroClone } from './site/hero-clone.js';
 import { createReel } from './site/reel.js';
 import { initDetails } from './site/details.js';
 import { initSculptures } from './site/sculptures.js';
@@ -8,13 +7,11 @@ const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('metal');
 const root = document.documentElement;
 const reelRoot = document.getElementById('reel');
-appendHeroClone(reelRoot);
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let calm = reduced;
 try {
-  const saved = localStorage.getItem('calm');
-  if (saved !== null) calm = saved === '1';
+  calm ||= localStorage.getItem('calm') === '1';
 } catch {}
 
 const engine = new Engine(canvas, { calm, debug: params.has('debug'), preserve: params.has('debug') });
@@ -33,20 +30,13 @@ const sculptures = initSculptures({ engine, calm });
 // calm toggle
 const calmBtn = document.getElementById('calm');
 const paintCalm = () => calmBtn.setAttribute('aria-pressed', String(engine.calm));
+calmBtn.hidden = !engine.ok;
 paintCalm();
 calmBtn.addEventListener('click', () => {
   engine.setCalm(!engine.calm);
   sculptures.setCalm(engine.calm);
   paintCalm();
   try { localStorage.setItem('calm', engine.calm ? '1' : '0'); } catch {}
-});
-
-// nav
-document.querySelectorAll('[data-go]').forEach((a) => {
-  a.addEventListener('click', (e) => {
-    e.preventDefault();
-    reel.scrollToSection(Number(a.dataset.go));
-  });
 });
 
 // pointer: mouse is "present" while inside the window, touch only while a finger is down
@@ -64,11 +54,12 @@ addEventListener('resize', onResize);
 new ResizeObserver(() => reel.measure()).observe(document.getElementById('reel'));
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => reel.measure());
 
-// drive progress and reel jump from the engine frame so they stay in step with rendering
+// Sample the current scene position before rendering.
 const baseFrame = engine.frame.bind(engine);
 engine.frame = (now, dt, skip) => {
-  reel.tick();
   engine.setProgress(reel.progress());
+  // Read the slot positions in the frame that draws them.
+  if (!skip) sculptures.updateForRender(now);
   baseFrame(now, dt, skip);
 };
 

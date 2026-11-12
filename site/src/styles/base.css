@@ -50,11 +50,13 @@ ul, ol { list-style: none; }
 .nav__links { display: flex; gap: clamp(14px, 3vw, 36px); font-size: 0.85em; letter-spacing: 0.04em; text-transform: uppercase; }
 .nav__links a { opacity: 0.8; transition: opacity 0.2s; }
 .nav__links a:hover { opacity: 1; }
+.nav__mobile-work { display: none; }
 .calm { font: inherit; font-size: 0.78em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
 .calm[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 
 @media (max-width: 640px) {
   .nav__links { display: none; }
+  .nav__mobile-work { display: inline-flex; align-items: center; min-height: 44px; font-size: 0.78em; letter-spacing: 0.08em; text-transform: uppercase; }
 }
 
 @media (prefers-reduced-motion: reduce) {

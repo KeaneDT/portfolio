@@ -4,17 +4,17 @@ Live preview: [keanedt.github.io/portfolio](https://keanedt.github.io/portfolio/
 
 A personal portfolio for Keane Travasso, an SMU Information Systems undergraduate in Singapore. It brings together selected automation, software and data projects; experience and education; and an original interactive liquid-chrome visual system. The site is built with vanilla JavaScript modules, WebGL2 and Vite.
 
-The GitHub Pages URL above is the current public site. The intended custom domain, `keanetravasso.com`, is not connected yet. Contact details in the site include an unconfirmed template email address; check it before relying on it.
+The GitHub Pages URL above is the public preview. The intended custom domain is `keanetravasso.com`. The site's contact action links to Keane's LinkedIn profile.
 
 ## What the site includes
 
-- Six scroll sections: Intro, About, Work, Path, Notes and Contact, with section navigation and a continuous reel that wraps downward.
-- Four featured projects—Task and Invoice Automation, Myoko Days, PolyEarth and LCU Judging Platform—plus a More Projects popup for three additional projects.
-- About, project and experience detail popups, with profile photos kept inside the relevant popups.
+- Six scroll sections in order: Intro, Work, About, Path, Notes and Contact. Native section links, a mobile Work shortcut, and a Back to top link work with the finite scroll.
+- Two featured case studies, Task and Invoice Automation and Ratventure, plus a Project OptimUs case study linked from the timeline. All projects includes Myoko Days and earlier work.
+- About and experience detail popups, along with direct links to the résumé and project pages.
 - Four interactive chrome role models for SMUAI, teaching, Army logistics and SMU education. Drag horizontally or focus a model and use the left and right arrow keys; Home resets its rotation. On touch screens, horizontal drags rotate the model while vertical scrolling remains available.
 - A Calm control and support for the system reduced-motion preference.
 - A no-WebGL fallback, including static illustrations for the role models. Site text and navigation remain real HTML and usable without the canvas.
-- Secondary pages at `site/case-study.html`, `site/resume.html` and `site/quick-view.html` for direct links and fallback navigation.
+- Direct pages at `site/projects/`, `site/case-study.html`, `site/resume.html` and `site/quick-view.html`.
 
 ## The liquid-chrome engine
 
@@ -48,7 +48,7 @@ npm run preview
 
 `npm test` runs 29 Node.js unit tests for the simulation, layouts and surface waves. `npm run build` writes the production site to `site/dist/`. `npm run preview` serves that build locally.
 
-The screenshot check uses headless Chrome or Chromium and the built preview. It checks rendered sections, pointer interaction, reel wrapping, secondary page responses, and shader or console errors. It writes screenshots to `site/shots/` (these generated shots are not a committed current-design reference).
+The screenshot check uses headless Chrome or Chromium and the built preview. It checks rendered sections, pointer interaction, native links, the finite page ending, the Calm toggle, direct project routes, and shader or console errors. It writes generated screenshots to `site/shots/`.
 
 ```bash
 npm run shots

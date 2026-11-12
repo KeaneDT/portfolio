@@ -31,15 +31,16 @@
   <canvas id="metal" aria-hidden="true"></canvas>
 
   <header class="nav">
-    <a class="nav__brand" href="#top" data-go="0">KT</a>
+    <a class="nav__brand" href="#top" aria-label="Keane Travasso, back to top">KT</a>
     <nav class="nav__links" aria-label="Primary">
-      <a href="#about" data-go="1">About</a>
-      <a href="#work" data-go="2">Work</a>
-      <a href="#path" data-go="3">Path</a>
-      <a href="#notes" data-go="4">Notes</a>
-      <a href="#contact" data-go="5">Contact</a>
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a href="#path">Path</a>
+      <a href="#notes">Notes</a>
+      <a href="#contact">Contact</a>
     </nav>
-    <button class="calm" id="calm" type="button" aria-pressed="false" title="Reduce motion">Calm</button>
+    <a class="nav__mobile-work" href="#work">Work</a>
+    <button class="calm" id="calm" type="button" aria-pressed="false" title="Reduce motion" hidden>Calm</button>
   </header>
 
   <main id="reel">
@@ -47,38 +48,50 @@
       <div class="intro">
         <p class="eyebrow">SMU Information Systems Undergraduate · Singapore</p>
         <h1 class="display">Keane<br />Travasso</h1>
-        <p class="lede">I build practical tools with data and automation, and bring people together through accessible AI events.</p>
+        <p class="lede">I build automation and data tools that make everyday work easier.</p>
+        <div class="hero-actions">
+          <a class="action" href="#work">View selected work</a>
+          <a class="action action--secondary" href="%BASE_URL%resume.html">Résumé</a>
+        </div>
       </div>
-      <p class="cue" aria-hidden="true">Scroll</p>
     </section>
 
-    <section class="sec sec--about" id="about" data-section="1">
+    <section class="sec sec--work" id="work" data-section="1">
+      <header class="sec__head">
+        <h2 class="title">Selected work</h2>
+      </header>
+      <div class="cards" id="cards">
+        <a class="card" href="%BASE_URL%projects/toyota-automation.html">
+          <div class="card__visual work-visual--automation" aria-hidden="true">
+            <span class="work-visual__step">Input</span><span>→</span>
+            <span class="work-visual__step">UiPath</span><span>→</span>
+            <span class="work-visual__step">Tasks</span>
+          </div>
+          <span class="card__tag">Toyota Tsusho · Automation</span>
+          <h3>Task and Invoice Automation</h3>
+          <p>Built three UiPath robots. One went into use generating tasks for other robots.</p>
+        </a>
+        <a class="card" href="%BASE_URL%projects/ratventure.html">
+          <div class="card__visual work-visual--game" aria-hidden="true">
+            <pre>RATVENTURE
+[ Explore ] → [ Level up ] → [ Rat King ]</pre>
+          </div>
+          <span class="card__tag">Personal project · Text-based game</span>
+          <h3>Ratventure</h3>
+          <p>Rebuilt my first coding project from scratch, adding boss fights, a levelling system and enemy dialogue.</p>
+        </a>
+      </div>
+      <a class="link" href="%BASE_URL%case-study.html">All projects →</a>
+    </section>
+
+    <section class="sec sec--about" id="about" data-section="2">
       <div class="about">
         <span class="about__seal" aria-hidden="true">KT</span>
         <p class="eyebrow">About</p>
         <h2 class="title">Building useful things. Bringing people together.</h2>
-        <p class="body">I enjoy building practical tools and bringing people together. At SMU, I’ve supported students with analytics and debugging, and as SMUAI Programmes Lead, I work with club teams on accessible AI events and workshops.</p>
-        <ul class="facts">
-          <li><span>Focus</span> Data analytics · Automation · AI events</li>
-          <li><span>Tools</span> UiPath · Excel · Tableau</li>
-          <li><span>Currently</span> SMU undergraduate · SMUAI Programmes Lead</li>
-        </ul>
+        <p class="body">I’m an Information Systems undergraduate at SMU. I’ve built UiPath automation for Toyota Tsusho and Ngee Ann Polytechnic, helped students work through analytics and debugging, and now plan AI events with SMUAI.</p>
         <a class="link" href="%BASE_URL%resume.html" data-detail="about">More about me →</a>
       </div>
-    </section>
-
-    <section class="sec sec--work" id="work" data-section="2">
-      <header class="sec__head">
-        <p class="eyebrow">Selected work</p>
-        <h2 class="title">Four things worth your time</h2>
-      </header>
-      <div class="cards" id="cards">
-        <a class="card" href="%BASE_URL%case-study.html#project-1" data-detail="project-1"><span class="card__n">01</span><h3>Task and Invoice Automation</h3><p>Three UiPath robots for task and invoice workflows; the task-generation robot was deployed.</p><span class="card__tag">Automation · 2022</span></a>
-        <a class="card" href="%BASE_URL%case-study.html#project-2" data-detail="project-2"><span class="card__n">02</span><h3>Myoko Days</h3><p>A team website and video promoting Myoko beyond ski season, informed by audience research and local input.</p><span class="card__tag">Team project</span></a>
-        <a class="card" href="%BASE_URL%case-study.html#project-3" data-detail="project-3"><span class="card__n">03</span><h3>PolyEarth</h3><p>Built the database, registration and discussion board for a team environmental-awareness site.</p><span class="card__tag">Full-stack · Team</span></a>
-        <a class="card" href="%BASE_URL%case-study.html#project-4" data-detail="project-4"><span class="card__n">04</span><h3>LCU Judging Platform</h3><p>Developed judges' views and functionality for a team competition platform; earned distinction.</p><span class="card__tag">Full-stack · Team</span></a>
-      </div>
-      <a class="link" href="%BASE_URL%case-study.html#more-projects" data-detail="more-projects" data-detail-title="More projects">More projects →</a>
     </section>
 
     <section class="sec sec--path" id="path" data-section="3">
@@ -88,7 +101,7 @@
         <div class="tl">
           <span class="tl__line" id="tl-line" aria-hidden="true"></span>
           <p class="sculpture-help" id="sculpture-help">Drag a model to turn it. When a model is focused, use the left and right arrow keys.</p>
-          <ol aria-label="Experience and education">
+          <ol aria-label="Experience and education, newest start date first">
             <li>
               <div class="sculpture-slot" data-sculpture="0" aria-label="Rotate AI gyroscope model" aria-describedby="sculpture-help">
                 <svg class="sculpture-fallback" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
@@ -102,7 +115,7 @@
                   </g>
                 </svg>
               </div>
-              <div class="tl-copy"><time>Apr 2026 – Now</time><h3>Programmes Lead, SMUAI</h3><p>Plans and delivers AI events and workshops with club teams.</p></div>
+              <div class="tl-copy"><time>Apr 2026–present</time><h3>Programmes Lead, SMUAI</h3><p>Plans and delivers AI events and workshops with club teams.</p></div>
             </li>
             <li>
               <div class="sculpture-slot" data-sculpture="1" aria-label="Rotate open book model" aria-describedby="sculpture-help">
@@ -115,7 +128,20 @@
                   </g>
                 </svg>
               </div>
-              <div class="tl-copy"><time>Jan – Apr 2026</time><h3>Teaching Assistant, SMU</h3><p>Supported 40+ students in Modelling &amp; Data Analytics (COR1305).</p></div>
+              <div class="tl-copy"><time>Jan–Apr 2026</time><h3>Teaching Assistant, SMU</h3><p>Supported 40+ students in Modelling &amp; Data Analytics (COR1305).</p></div>
+            </li>
+            <li>
+              <div class="sculpture-slot" data-sculpture="3" aria-label="Rotate graduation cap model" aria-describedby="sculpture-help">
+                <svg class="sculpture-fallback" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+                  <defs><linearGradient id="fallback-cap-metal" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--metal-bright)"/><stop offset="0.48" stop-color="var(--metal-mid)"/><stop offset="1" stop-color="var(--metal-dark)"/></linearGradient></defs>
+                  <g fill="none" stroke="url(#fallback-cap-metal)" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
+                    <path d="m15 48 45-22 45 22-45 22-45-22Z" fill="var(--metal-dark)" fill-opacity=".28"/>
+                    <path d="M32 58v19c16 12 40 12 56 0V58M105 49v27"/>
+                    <circle cx="105" cy="80" r="4" fill="var(--metal-bright)"/>
+                  </g>
+                </svg>
+              </div>
+              <div class="tl-copy"><time>Aug 2025–May 2029 (expected)</time><h3>BSc Information Systems, SMU</h3><p>Dean’s List, AY 2025/2026.</p></div>
             </li>
             <li>
               <div class="sculpture-slot" data-sculpture="2" aria-label="Rotate transport wheel model" aria-describedby="sculpture-help">
@@ -129,70 +155,42 @@
                   </g>
                 </svg>
               </div>
-              <div class="tl-copy"><time>Jun 2024 – Aug 2025</time><h3>Mech Transport Officer / Project Officer, Singapore Army</h3><p>Managed 200+ transport operators and directed battalion audit preparation rated Outstanding.</p></div>
-            </li>
-            <li>
-              <div class="sculpture-slot" data-sculpture="3" aria-label="Rotate graduation cap model" aria-describedby="sculpture-help">
-                <svg class="sculpture-fallback" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
-                  <defs><linearGradient id="fallback-cap-metal" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--metal-bright)"/><stop offset="0.48" stop-color="var(--metal-mid)"/><stop offset="1" stop-color="var(--metal-dark)"/></linearGradient></defs>
-                  <g fill="none" stroke="url(#fallback-cap-metal)" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
-                    <path d="m15 48 45-22 45 22-45 22-45-22Z" fill="var(--metal-dark)" fill-opacity=".28"/>
-                    <path d="M32 58v19c16 12 40 12 56 0V58M105 49v27"/>
-                    <circle cx="105" cy="80" r="4" fill="var(--metal-bright)"/>
-                  </g>
-                </svg>
-              </div>
-              <div class="tl-copy"><time>Aug 2025 – May 2029 (expected)</time><h3>BSc Information Systems, SMU</h3><p>Undergraduate programme; SMUAI and SMUX Kayaking leadership.</p></div>
+              <div class="tl-copy"><time>Jun 2024–Aug 2025</time><h3>Mech Transport Officer / Project Officer, Singapore Army</h3><p>Managed 200+ transport operators and co-led Project OptimUs.</p><a class="timeline-link" href="%BASE_URL%projects/project-optimus.html">Read the Project OptimUs case study →</a></div>
             </li>
           </ol>
         </div>
-        <a class="link" href="%BASE_URL%resume.html" data-detail="experience">Full résumé →</a>
+        <div class="path-actions">
+          <a class="link" href="%BASE_URL%resume.html">Full résumé →</a>
+          <a class="link" href="%BASE_URL%resume.html#experience" data-detail="experience">Experience details →</a>
+        </div>
       </div>
     </section>
 
     <section class="sec sec--drip" id="notes" data-section="4">
       <div class="notes">
-        <p class="eyebrow">Notes</p>
-        <h2 class="title">Outside the work</h2>
+        <h2 class="title">Notes</h2>
         <ul>
           <li>
-            <div class="interest-card__top">
-              <span class="interest-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="film-metal" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--metal-bright)"/><stop offset=".5" stop-color="var(--metal-mid)"/><stop offset="1" stop-color="var(--metal-dark)"/></linearGradient></defs><g fill="none" stroke="url(#film-metal)" stroke-width="2.5"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="5"/><circle cx="32" cy="18" r="4.5"/><circle cx="44" cy="26" r="4.5"/><circle cx="39" cy="41" r="4.5"/><circle cx="25" cy="41" r="4.5"/><circle cx="20" cy="26" r="4.5"/></g></svg>
-              </span>
-              <span class="interest-card__index">01</span>
-            </div>
-            <h3>Film</h3><p>A love of cinema and the stories told on screen.</p>
+            <h3>Getting people on the water</h3>
+            <p>As SMUX Kayaking President in 2026, I coordinated members, kayaking sessions and club administration.</p>
           </li>
           <li>
-            <div class="interest-card__top">
-              <span class="interest-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="puzzle-metal" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--metal-bright)"/><stop offset=".5" stop-color="var(--metal-mid)"/><stop offset="1" stop-color="var(--metal-dark)"/></linearGradient></defs><g fill="none" stroke="url(#puzzle-metal)" stroke-linejoin="round" stroke-width="2.5"><path d="M10 12h18v10a5 5 0 1 0 10 0V12h16v17H44a5 5 0 1 0 0 10h10v13H36V42a5 5 0 1 0-10 0v10H10V36h10a5 5 0 1 0 0-10H10V12Z"/><path d="M28 12v7M54 29h-7M36 52v-7M10 36h7" opacity=".58"/></g></svg>
-              </span>
-              <span class="interest-card__index">02</span>
-            </div>
-            <h3>Wordle &amp; Connections</h3><p>Wordplay, pattern-spotting, and the satisfaction of the solve.</p>
-          </li>
-          <li>
-            <div class="interest-card__top">
-              <span class="interest-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="kayak-metal" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--metal-bright)"/><stop offset=".5" stop-color="var(--metal-mid)"/><stop offset="1" stop-color="var(--metal-dark)"/></linearGradient></defs><g fill="none" stroke="url(#kayak-metal)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"><path d="M32 9c8 8 13 19 13 29 0 8-5 15-13 19-8-4-13-11-13-19 0-10 5-21 13-29Z"/><path d="M27 23h10M26 43h12M8 50 56 14"/><path d="m9 43 7 13M48 8l7 13" stroke-width="4"/><circle cx="32" cy="35" r="3"/></g></svg>
-              </span>
-              <span class="interest-card__index">03</span>
-            </div>
-            <h3>Kayaking</h3><p>Time on the water, and serving as SMUX Kayaking President in 2026.</p>
+            <h3>Revisiting my first game</h3>
+            <p>I deleted the first Ratventure after the semester ended. Rebuilding it let me return to the same idea and add the features I’d wanted when I started learning to code.</p>
+            <a class="link" href="%BASE_URL%projects/ratventure.html">Read the Ratventure rebuild →</a>
           </li>
         </ul>
       </div>
     </section>
 
     <section class="sec sec--contact" id="contact" data-section="5">
-      <div class="contact">
-        <p class="eyebrow">Contact</p>
-        <h2 class="display display--sm">Let's make<br />something.</h2>
-        <a class="mail" href="mailto:hello@keanetravasso.com">hello@keanetravasso.com</a>
-        <p class="socials"><a href="https://www.linkedin.com/in/keanedt/">LinkedIn</a></p>
-      </div>
+      <footer class="contact">
+        <h2 class="display display--sm">Get in touch</h2>
+        <div class="contact-actions">
+          <a class="action" href="https://www.linkedin.com/in/keanedt/">Connect on LinkedIn</a>
+          <a class="link" href="#top">Back to top ↑</a>
+        </div>
+      </footer>
     </section>
 
   </main>
@@ -205,34 +203,6 @@
     <div class="detail-dialog__content" id="detail-content"></div>
   </dialog>
 
-  <template data-detail-template="project-1">
-    <p class="eyebrow">Toyota Tsusho · Mar–Jul 2022 · RPA Developer (Internship)</p>
-    <p>Developed three UiPath robots for task generation, invoice retrieval and invoice creation.</p>
-    <h3>Contribution</h3>
-    <p>The task-generation robot was deployed. Nine reusable shared workflows were adopted across the robots; five Robot Definition Documents were prepared, and the robots were migrated from Kofax RPA to UiPath.</p>
-    <figure>
-      <img src="%BASE_URL%images/profile/toyota-rpa-team.jpg" alt="Keane Travasso with the Toyota Tsusho RPA team" loading="lazy" decoding="async" width="1280" height="975" />
-      <figcaption>Toyota Tsusho · RPA team</figcaption>
-    </figure>
-  </template>
-  <template data-detail-template="project-2">
-    <p class="eyebrow">Team website and video · Myoko</p>
-    <p>This team project promoted Myoko beyond ski season. The website and video were informed by audience research in Singapore and input from local stakeholders in Japan. The site included a modular itinerary planner and interactive 3D map.</p>
-    <p><a class="link" href="https://www.linkedin.com/feed/update/urn:li:activity:7524398228734382080/" target="_blank" rel="noopener noreferrer">View the project post</a></p>
-    <p><a class="link" href="https://lnkd.in/g-cUq2uX" target="_blank" rel="noopener noreferrer">Visit Myoko Days</a></p>
-  </template>
-  <template data-detail-template="project-3">
-    <p class="eyebrow">Environmental awareness site · Team project</p>
-    <p>PolyEarth is a full-stack site created by a team to support environmental awareness.</p>
-    <h3>Contribution</h3><p>Built the database, registration and login, and discussion board; also helped polish the interface.</p>
-    <h3>Technology</h3><p>C#, SQL Server, HTML and CSS.</p>
-  </template>
-  <template data-detail-template="project-4">
-    <p class="eyebrow">Competition judging platform · Team project</p>
-    <p>LCU is a full-stack competition judging platform built by a team.</p>
-    <h3>Contribution</h3><p>Developed judges' views and functionality. The project earned distinction.</p>
-    <h3>Technology</h3><p>C#, SQL Server, HTML and CSS.</p>
-  </template>
   <template data-detail-template="about">
     <h3 class="title">Practical tools, data insight, shared learning.</h3>
     <p class="body">I enjoy building practical tools and bringing people together. I developed UiPath automation at Toyota Tsusho and Ngee Ann Polytechnic, and supported SMU students with data analytics and debugging. As SMUAI Programmes Lead, I work with club teams on accessible AI events and workshops.</p>
@@ -241,23 +211,6 @@
       <li><span>Tools</span> UiPath · Excel · Tableau · Python · C# · SQL Server</li>
       <li><span>Currently</span> SMU Information Systems undergraduate · SMUAI Programmes Lead</li>
     </ul>
-  </template>
-  <template data-detail-template="more-projects">
-    <section>
-      <h3>Machine Learning Modelling</h3>
-      <p class="eyebrow">Oct 2021–Feb 2022</p>
-      <p>Covered eight models across classification and continuous-prediction datasets, including linear and logistic regression, decision trees, neural networks and random forests.</p>
-    </section>
-    <section>
-      <h3>Statch · Financial Budgeting Tool</h3>
-      <p class="eyebrow">Team spreadsheet</p>
-      <p>Built with Excel formulas and macros. Keane developed the investment and liability features and the main dashboard.</p>
-    </section>
-    <section>
-      <h3>UiPath Extraction and Visualization</h3>
-      <p class="eyebrow">Team project</p>
-      <p>The team extracted market data and emailed Tableau visualizations. Keane extracted and visualized Japanese watch-company data; the project earned distinction.</p>
-    </section>
   </template>
   <template data-detail-template="experience">
     <section>
@@ -269,7 +222,7 @@
       <p>Supported Professor Jason Chan for Modelling &amp; Data Analytics (COR1305); guided students through analytics and debugging, answered lecture questions, invigilated, and managed attendance for 40+ students.</p>
       <figure>
         <img src="%BASE_URL%images/profile/cor1305-teaching.jpg" alt="Keane Travasso and Professor Jason Chan in a COR1305 classroom." loading="lazy" decoding="async" width="1280" height="960" />
-        <figcaption>COR1305 · with Professor Jason Chan</figcaption>
+        <figcaption><a href="https://www.linkedin.com/in/keanedt/overlay/Position/2863679465/treasury/">COR1305 · with Professor Jason Chan · View LinkedIn attachment</a></figcaption>
       </figure>
 
       <p class="eyebrow">Jun 2024–Aug 2025 · Singapore Army</p>
@@ -277,7 +230,7 @@
       <p>Commissioned logistics officer managing 200+ transport operators. Directed battalion SSA audit preparation that achieved Outstanding. Co-led Project OptimUs, a set of 10 administrative microprojects, named one of two most-voted transformation projects at Army Innovation Day 2024.</p>
       <figure>
         <img src="%BASE_URL%images/profile/army-innovation-day-2024.jpg" alt="Project OptimUs team onstage at Army Innovation Day 2024" loading="lazy" decoding="async" width="1280" height="960" />
-        <figcaption>Project OptimUs · Army Innovation Day 2024</figcaption>
+        <figcaption><a href="https://www.linkedin.com/in/keanedt/overlay/Position/2430927563/treasury/">Project OptimUs · Army Innovation Day 2024 · View LinkedIn attachment</a></figcaption>
       </figure>
 
       <p class="eyebrow">May 2023–Jun 2024 · Singapore Army</p>
@@ -309,8 +262,8 @@
 
     <section>
       <h3>Credentials and selected course completions</h3>
-      <p>UiPath RPA Developer Foundation (v2019.4), Aug 2021. VMware Certified Technical Associate – Application Modernization 2022, Dec 2022.</p>
-      <p>Course completions: Anthropic Claude 101 (Sep 2026); LinkedIn Deep Learning Foundations: Natural Language Processing with TensorFlow (Jan 2023); LinkedIn Creating Interactive Tableau Dashboards (May 2021); LinkedIn Data Fluency: Exploring and Describing Data (Jul 2021); Nanyang Polytechnic Mastering the Art of Pitching (Jul 2024).</p>
+      <p>VMware Certified Technical Associate – Application Modernization 2022, Dec 2022. UiPath RPA Developer Foundation (v2019.4), Aug 2021.</p>
+      <p>Course completions: Anthropic Claude 101 (Sep 2026); Nanyang Polytechnic Mastering the Art of Pitching (Jul 2024); LinkedIn Deep Learning Foundations: Natural Language Processing with TensorFlow (Jan 2023); LinkedIn Data Fluency: Exploring and Describing Data (Jul 2021); LinkedIn Creating Interactive Tableau Dashboards (May 2021).</p>
     </section>
 
     <section>
@@ -320,7 +273,7 @@
 
     <section>
       <h3>Leadership and service</h3>
-      <p>Taught seniors CapCut through Yong-en Care Centre service learning (May 2021); volunteered with Less Plastic Movement (Jun 2019); and served Project Mi at Bukit Batok Secondary School (Feb 2019), packing donated rice. Project Mi roles: Committee (2017), First-Aider (2018), Team Leader (2019).</p>
+      <p>Taught seniors CapCut through Yong-en Care Centre service learning (May 2021); volunteered with Less Plastic Movement (Jun 2019); and served Project Mi at Bukit Batok Secondary School (Feb 2019), packing donated rice. Project Mi roles: Team Leader (2019), First-Aider (2018), Committee (2017).</p>
     </section>
 
     <section>

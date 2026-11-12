@@ -16,7 +16,7 @@
 
 import { ANCHORED } from './sim.js';
 
-export const SECTIONS = ['intro', 'about', 'work', 'thread', 'drip', 'contact'];
+export const SECTIONS = ['intro', 'work', 'about', 'thread', 'drip', 'contact'];
 
 export class Layout {
   constructor() {
