@@ -25,6 +25,7 @@ a { color: inherit; text-decoration: none; }
 h1, h2, h3, p, ul, ol { margin: 0; padding: 0; }
 h1, h2, .display, .title { font-family: var(--font-display); }
 ul, ol { list-style: none; }
+::selection { background: var(--selection-bg); color: var(--selection-fg); -webkit-text-fill-color: var(--selection-fg); text-shadow: none; }
 
 #metal { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; background: #07080a; }
 
@@ -58,4 +59,75 @@ ul, ol { list-style: none; }
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; }
+}
+
+html.detail-open { overflow: hidden; scrollbar-gutter: stable; }
+body.detail-open { overflow: hidden; }
+
+.detail-dialog {
+  width: min(1000px, calc(100vw - 24px));
+  max-width: none;
+  max-height: 88svh;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 24px 100px color-mix(in srgb, var(--bg) 90%, transparent);
+}
+.detail-dialog[open] { display: flex; flex-direction: column; }
+.detail-dialog::backdrop { background: color-mix(in srgb, var(--bg) 88%, transparent); }
+.detail-dialog__header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px clamp(16px, 3vw, 30px);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.detail-dialog__header h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.detail-dialog__close {
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  color: var(--fg);
+  font: inherit;
+  font-size: 1.7rem;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.detail-dialog__content {
+  min-height: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  padding: clamp(22px, 5vw, 48px);
+}
+.detail-dialog__content h3 { margin-top: 32px; font-size: 1.2em; letter-spacing: -0.02em; }
+.detail-dialog__content p { max-width: 65ch; margin-top: 14px; color: var(--mute); }
+.detail-dialog__content .eyebrow { margin-top: 0; }
+.detail-dialog__content img { display: block; max-width: 100%; height: auto; border-radius: 12px; }
+.detail-dialog__content figure { margin: 24px 0; }
+.detail-dialog__content figcaption { margin-top: 10px; color: var(--mute); font-size: 0.85em; }
+
+@media (max-width: 640px) {
+  .detail-dialog { width: calc(100vw - 16px); max-height: 88svh; border-radius: 16px; }
+  .detail-dialog__content { padding: 20px 18px; }
 }

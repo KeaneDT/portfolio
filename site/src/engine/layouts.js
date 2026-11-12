@@ -22,112 +22,211 @@ export class Layout {
   constructor() {
     this.x = new Float32Array(ANCHORED); this.y = new Float32Array(ANCHORED);
     this.r = new Float32Array(ANCHORED); this.k = new Float32Array(ANCHORED).fill(1);
-    this.drip = new Float32Array(ANCHORED);
+    this.drip = new Float32Array(ANCHORED); this.join = new Float32Array(ANCHORED);
     this.orb = { x: 0, y: 0, R: 0.2, yaw: 0, clay: 0 };
   }
 
   clear() {
-    this.r.fill(0); this.drip.fill(0); this.k.fill(1);
+    this.r.fill(0); this.drip.fill(0); this.join.fill(0); this.k.fill(1);
   }
 
   put(i, x, y, r, k = 1, drip = 0) {
     if (i < 0 || i >= ANCHORED) return;
     this.x[i] = x; this.y[i] = y; this.r[i] = r; this.k[i] = k; this.drip[i] = drip;
   }
+
+  link(i, weight = 1) {
+    if (i < 0 || i >= ANCHORED - 1) return;
+    this.join[i] = Number.isFinite(weight) ? Math.min(1, Math.max(0, weight)) : 0;
+  }
 }
 
 const TAU = Math.PI * 2;
-const unit = (ctx) => (ctx.mobile ? 0.78 : 1);
+const validRect = (r) => r && Number.isFinite(r.x) && Number.isFinite(r.y) && Number.isFinite(r.w) && Number.isFinite(r.h) && r.w > 0.04 && r.h > 0.04;
 
-/** Hero: orb centre stage with small beads in loose orbit. Big pools sit low in the corners. */
+/** Ordered centerline nodes drive a smooth Gaussian liquid field, with broad tapered ends. */
+function curveNode(L, i, q, x, y, scale = 1) {
+  L.put(i, x, y, (0.075 + 0.025 * Math.sin(Math.PI * q)) * scale, 1);
+  if (i < ANCHORED - 1) L.link(i);
+}
+
+function hideOrb(L, yaw = 0) {
+  L.orb.x = 0; L.orb.y = 0; L.orb.R = 0; L.orb.yaw = yaw; L.orb.clay = 0;
+}
+
+const K_ROUTE_X = new Float32Array(6), K_ROUTE_Y = new Float32Array(6);
+const K_PATH_X = new Float32Array(32), K_PATH_Y = new Float32Array(32), K_PATH_S = new Float32Array(32);
+let kPathCount = 0, kJointA = 0, kJointB = 0;
+
+function pushKPoint(x, y) {
+  K_PATH_X[kPathCount] = x; K_PATH_Y[kPathCount] = y; kPathCount++;
+}
+
+/** Build and arc-length sample a rounded polyline without per-frame allocations. */
+function aboutK(ctx, L) {
+  const a = ctx.aspect, cx = ctx.mobile ? 0 : -0.30 * a;
+  const left = cx - 0.10 * a, right = ctx.mobile ? 0.26 * a : 0.04 * a;
+  const top = ctx.mobile ? -0.12 : 0.34, bottom = ctx.mobile ? -0.48 : -0.34, middle = ctx.mobile ? -0.30 : -0.02;
+  K_ROUTE_X[0] = left; K_ROUTE_Y[0] = top;
+  K_ROUTE_X[1] = left; K_ROUTE_Y[1] = bottom;
+  K_ROUTE_X[2] = left; K_ROUTE_Y[2] = middle;
+  K_ROUTE_X[3] = right; K_ROUTE_Y[3] = ctx.mobile ? top : 0.40;
+  K_ROUTE_X[4] = left; K_ROUTE_Y[4] = middle;
+  K_ROUTE_X[5] = right; K_ROUTE_Y[5] = ctx.mobile ? bottom : -0.40;
+
+  kPathCount = 0; kJointA = kJointB = 0;
+  pushKPoint(K_ROUTE_X[0], K_ROUTE_Y[0]);
+  for (let v = 1; v < 5; v++) {
+    const px = K_ROUTE_X[v - 1], py = K_ROUTE_Y[v - 1];
+    const x = K_ROUTE_X[v], y = K_ROUTE_Y[v], nx = K_ROUTE_X[v + 1], ny = K_ROUTE_Y[v + 1];
+    const inLength = Math.hypot(x - px, y - py), outLength = Math.hypot(nx - x, ny - y);
+    const cut = Math.min(0.05, inLength * 0.18, outLength * 0.18);
+    const bx = x + (px - x) * (cut / inLength), by = y + (py - y) * (cut / inLength);
+    const ax = x + (nx - x) * (cut / outLength), ay = y + (ny - y) * (cut / outLength);
+    pushKPoint(bx, by);
+    for (let step = 1; step <= 6; step++) {
+      const t = step / 6, u = 1 - t;
+      pushKPoint(u * u * bx + 2 * u * t * x + t * t * ax, u * u * by + 2 * u * t * y + t * t * ay);
+      if (step === 3 && v === 2) kJointA = kPathCount - 1;
+      if (step === 3 && v === 4) kJointB = kPathCount - 1;
+    }
+  }
+  pushKPoint(K_ROUTE_X[5], K_ROUTE_Y[5]);
+  K_PATH_S[0] = 0;
+  for (let i = 1; i < kPathCount; i++) {
+    K_PATH_S[i] = K_PATH_S[i - 1] + Math.hypot(K_PATH_X[i] - K_PATH_X[i - 1], K_PATH_Y[i] - K_PATH_Y[i - 1]);
+  }
+  const total = K_PATH_S[kPathCount - 1] || 1;
+  const jointA = K_PATH_S[kJointA] / total, jointB = K_PATH_S[kJointB] / total;
+  for (let i = 0; i < ANCHORED; i++) {
+    const q = i / (ANCHORED - 1), target = q * total;
+    let seg = 0;
+    while (seg < kPathCount - 2 && K_PATH_S[seg + 1] < target) seg++;
+    const length = K_PATH_S[seg + 1] - K_PATH_S[seg];
+    const t = length > 1e-6 ? (target - K_PATH_S[seg]) / length : 0;
+    const x = K_PATH_X[seg] + (K_PATH_X[seg + 1] - K_PATH_X[seg]) * t;
+    const y = K_PATH_Y[seg] + (K_PATH_Y[seg + 1] - K_PATH_Y[seg]) * t;
+    const near = Math.min(Math.abs(q - jointA), Math.abs(q - jointB));
+    let width = 1;
+    if (x < left + 0.035 * a && y < middle) width = 0.77;
+    if (x > left + 0.035 * a && y > middle) width = 0.77;
+    width *= 1 - 0.1 * Math.exp(-((near / 0.045) ** 2));
+    L.put(i, x, y, 0.10 * width, 1);
+    if (i < ANCHORED - 1) L.link(i);
+  }
+}
+
+/** Hero: a compact folded comma sits right of the headline. */
 function intro(ctx, L) {
-  const u = unit(ctx), a = ctx.aspect, t = ctx.t;
-  L.orb.x = ctx.mobile ? 0 : 0.17 * a; L.orb.y = ctx.mobile ? 0.12 : 0.04; L.orb.R = 0.27 * u; L.orb.yaw = 0; L.orb.clay = 0;
-  for (let i = 0; i < 10; i++) {
-    const ph = (i / 10) * TAU, sp = 0.18 + (i % 3) * 0.06;
-    const rad = (0.42 + (i % 4) * 0.07) * u;
-    const ang = ph + t * sp * (i % 2 ? 1 : -1);
-    L.put(i, Math.cos(ang) * rad * 1.5, Math.sin(ang) * rad * 0.75, (0.016 + (i % 3) * 0.011) * u, 0.9 + (i % 3) * 0.2);
+  const a = ctx.aspect;
+  hideOrb(L);
+  for (let i = 0; i < ANCHORED; i++) {
+    const q = i / (ANCHORED - 1);
+    const theta = q * TAU * 0.82 - 0.2, radius = 0.065 + 0.035 * q;
+    const cx = ctx.mobile ? 0 : 0.28 * a, cy = ctx.mobile ? 0.25 - q * 0.18 : 0.08;
+    const x = cx + radius * Math.cos(theta) + q * (ctx.mobile ? 0.025 : 0.04);
+    const y = cy + radius * Math.sin(theta) - (ctx.mobile ? 0 : q * 0.045);
+    curveNode(L, i, q, x, y);
   }
-  L.put(10, -a * 0.5 + 0.1, -0.5 + 0.02, 0.17 * u, 0.6);
-  L.put(11, a * 0.5 - 0.12, -0.5 + 0.02, 0.2 * u, 0.6);
-  L.put(12, 0, -0.5 - 0.01, 0.14 * u, 0.5);
 }
 
-/** About: orb slides left and turns; a slow lava-lamp cluster rises on the right. */
+/** About: the rounded, open K monogram stays left of the copy. */
 function about(ctx, L) {
-  const u = unit(ctx), a = ctx.aspect, t = ctx.t;
-  const side = ctx.mobile ? 0 : -0.26 * a;
-  L.orb.x = side; L.orb.y = ctx.mobile ? 0.28 : 0.0; L.orb.R = (ctx.mobile ? 0.15 : 0.23); L.orb.yaw = 0.95; L.orb.clay = 0.35;
-  // the lava-lamp cluster pools under the orb so the copy on the other side stays readable
-  const cx = ctx.mobile ? 0 : side, cy = ctx.mobile ? -0.36 : -0.3;
-  for (let i = 0; i < 5; i++) {
-    const ph = i * 2.3;
-    L.put(i, cx + Math.sin(t * 0.21 + ph) * 0.2 * u, cy + Math.sin(t * 0.17 * (1 + i * 0.13) + ph * 1.3) * 0.1 * u,
-      (0.05 + (i % 3) * 0.022) * u, 0.7);
-  }
-  for (let i = 7; i < 9; i++) L.put(i, cx + Math.cos(t * 0.3 + i) * 0.3 * u, cy + Math.sin(t * 0.26 + i * 2) * 0.14 * u, 0.018 * u, 1.1);
+  hideOrb(L, 0.95);
+  aboutK(ctx, L);
 }
 
-/** Work: metal oozes around the glass project cards (DOM-bound). Orb becomes a small mascot top-right. */
+/** Work: one broad horseshoe stays outside the project-card group. */
 function work(ctx, L) {
-  const u = unit(ctx), a = ctx.aspect, t = ctx.t;
-  L.orb.x = a * 0.5 - 0.1 * u; L.orb.y = ctx.mobile ? 0.3 : 0.27; L.orb.R = ctx.mobile ? 0.045 : 0.06; L.orb.yaw = -0.7; L.orb.clay = 0;
+  const a = ctx.aspect;
+  hideOrb(L, -0.7);
   const cards = (ctx.rects && ctx.rects.cards) || [];
-  let n = 0;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (let c = 0; c < Math.min(cards.length, 4); c++) {
     const k = cards[c];
-    const sgn = c % 2 ? -1 : 1;
-    // two beads hugging opposite corners + one bead that creeps along the bottom edge
-    L.put(n++, k.x - sgn * (k.w / 2 + 0.005), k.y + k.h / 2 - 0.02, 0.055 * u, 1.0);
-    L.put(n++, k.x + sgn * (k.w / 2 + 0.005), k.y - k.h / 2 + 0.02, 0.075 * u, 0.8);
-    L.put(n++, k.x + Math.sin(t * 0.5 + c * 2) * k.w * 0.34, k.y - k.h / 2 - 0.004, 0.034 * u, 1.2);
+    if (!validRect(k)) continue;
+    minX = Math.min(minX, k.x - k.w / 2); maxX = Math.max(maxX, k.x + k.w / 2);
+    minY = Math.min(minY, k.y - k.h / 2); maxY = Math.max(maxY, k.y + k.h / 2);
   }
-  if (!cards.length) {
-    for (let i = 0; i < 6; i++) L.put(i, Math.sin(t * 0.3 + i) * 0.5 * a, -0.2 + Math.cos(t * 0.2 + i) * 0.3, 0.05 * u);
+  const cx = ctx.mobile ? 0 : Number.isFinite(minX) ? (minX + maxX) * 0.5 : 0.16 * a;
+  const rx = ctx.mobile ? 0.39 * a : Number.isFinite(minX)
+    ? Math.min(Math.max((maxX - minX) * 0.5 + 0.08, 0.28 * a), 0.45 * a) : 0.34 * a;
+  const top = ctx.mobile ? -0.07 : Number.isFinite(maxY) ? maxY + 0.055 : 0.3;
+  const depth = ctx.mobile ? 0.42 : Number.isFinite(minY) ? Math.max(maxY - minY + 0.12, 0.42) : 0.5;
+  for (let i = 0; i < ANCHORED; i++) {
+    const q = i / (ANCHORED - 1);
+    const x = cx + (2 * q - 1) * rx;
+    const y = top - depth * Math.sin(Math.PI * q) ** 2;
+    curveNode(L, i, q, x, y, 1.03);
   }
 }
 
-/** Thread: a beaded strand that follows the timeline line, necking between beads. */
+/** Thread: an open folded arch curls on the right side of the timeline. */
 function thread(ctx, L) {
-  const u = unit(ctx), a = ctx.aspect, t = ctx.t;
-  const cards = (ctx.rects && ctx.rects.thread) || [];
-  const cx = (cards.length ? cards[0].x : ctx.mobile ? -a * 0.38 : -a * 0.18) - (ctx.mobile ? 0.035 : 0.045);
-  L.orb.x = ctx.mobile ? a * 0.28 : a * 0.3; L.orb.y = 0.0; L.orb.R = ctx.mobile ? 0.1 : 0.2; L.orb.yaw = -0.9; L.orb.clay = 0.6;
-  const N = 15;
-  for (let i = 0; i < N; i++) {
-    const y = 0.56 - (i / (N - 1)) * 1.12;
-    L.put(i, cx + Math.sin(t * 0.8 + i * 0.9) * 0.025 * u, y, (0.032 + 0.009 * Math.sin(i * 1.7 + t)) * u, 1.3);
+  const a = ctx.aspect;
+  hideOrb(L, -0.9);
+  for (let i = 0; i < ANCHORED; i++) {
+    const q = i / (ANCHORED - 1);
+    const fraction = 0.84, cx = ctx.mobile ? 0 : 0.30 * a, cy = ctx.mobile ? -0.30 : 0;
+    const rx = ctx.mobile ? 0.22 * a : 0.20 * a, ry = ctx.mobile ? 0.16 : 0.32;
+    let x, y;
+    if (q <= fraction) {
+      const angle = Math.PI / 4 + (q / fraction) * TAU * 0.75;
+      x = cx + rx * Math.cos(angle); y = cy + ry * Math.sin(angle);
+    } else {
+      const t = (q - fraction) / (1 - fraction), u = 1 - t;
+      const sx = cx + rx * Math.cos(Math.PI / 4 + TAU * 0.75);
+      const sy = cy + ry * Math.sin(Math.PI / 4 + TAU * 0.75);
+      const cx2 = cx + rx * 1.3, cy2 = cy - ry * 0.6;
+      const ex = cx + rx * 1.7, ey = cy - ry * 0.86;
+      x = u * u * sx + 2 * u * t * cx2 + t * t * ex;
+      y = u * u * sy + 2 * u * t * cy2 + t * t * ey;
+    }
+    curveNode(L, i, q, x, y, 1.08);
   }
 }
 
-/** Drip: a ceiling pool sheds droplets that fall into a lake at the bottom. */
+/** Notes: an expanding ripple coil hangs from the upper edge, clear of the copy. */
 function drip(ctx, L) {
-  const u = unit(ctx), a = ctx.aspect, t = ctx.t;
-  L.orb.x = 0; L.orb.y = -0.34; L.orb.R = ctx.mobile ? 0.1 : 0.16; L.orb.yaw = 0.0; L.orb.clay = 0;
-  const top = 0.5, n = ctx.mobile ? 3 : 5;
-  for (let i = 0; i < n; i++) {
-    const x = (i / (n - 1) - 0.5) * a * 0.85 + Math.sin(t * 0.3 + i) * 0.02;
-    L.put(i, x, top - 0.01, (0.09 + (i % 2) * 0.045) * u * (ctx.mobile ? 0.7 : 1), 0.8, 1.0 + (i % 3) * 0.25);
-  }
-  const m = ctx.mobile ? 4 : 7;
-  for (let i = 0; i < m; i++) {
-    const x = (i / (m - 1) - 0.5) * a * 1.05;
-    L.put(8 + i, x, -0.5 + 0.015 + Math.sin(t * 0.9 + i * 1.3) * 0.012, (0.1 + (i % 2) * 0.05) * u, 0.7);
+  const a = ctx.aspect;
+  hideOrb(L);
+  for (let i = 0; i < ANCHORED; i++) {
+    const q = i / (ANCHORED - 1);
+    const angle = ctx.mobile ? -Math.PI / 2 + q * Math.PI * 1.15 : -Math.PI / 2 + q * TAU * 1.35;
+    const radius = ctx.mobile ? 0.03 + 0.14 * q : 0.12 + 0.36 * q;
+    const cx = ctx.mobile ? 0 : -0.27 * a, cy = ctx.mobile ? -0.30 : 0.05;
+    const x = cx + radius * Math.cos(angle), y = cy + radius * Math.sin(angle);
+    curveNode(L, i, q, x, y, 1.05);
   }
 }
 
-/** Contact: one long liquid band across the screen with the orb riding it. */
+/** Contact: a broad, low wave runs below the text. */
 function contact(ctx, L) {
-  const u = unit(ctx), a = ctx.aspect, t = ctx.t;
-  L.orb.x = ctx.mobile ? 0 : 0.3 * a; L.orb.y = ctx.mobile ? -0.1 : -0.02; L.orb.R = ctx.mobile ? 0.12 : 0.18; L.orb.yaw = 0; L.orb.clay = 0;
-  const n = ctx.mobile ? 8 : 16;
-  for (let i = 0; i < n; i++) {
-    const x = (i / (n - 1) - 0.5) * (a + 0.1);
-    L.put(i, x, -0.27 + Math.sin(x * 4.2 + t * 0.9) * 0.035, (0.05 + 0.014 * Math.sin(i * 2.1 + t * 0.7)) * u, 1.1);
+  const a = ctx.aspect, t = ctx.t;
+  hideOrb(L);
+  for (let i = 0; i < ANCHORED; i++) {
+    const q = i / (ANCHORED - 1);
+    const phase = (q - 0.88) * TAU * 2.5, d = (q - 0.94) / 0.075;
+    const roll = Math.exp(-d * d);
+    const x = (q - 0.5) * (ctx.mobile ? 0.82 : 1) * a + 0.04 * a * roll * Math.sin(phase);
+    const y = (ctx.mobile ? -0.30 : -0.27) + Math.sin(q * TAU * 0.75 + t * 0.035) * (ctx.mobile ? 0.045 : 0.075)
+      + 0.08 * roll * Math.cos(phase);
+    curveNode(L, i, q, x, y, 1.0);
   }
-  L.put(n, -a * 0.5 + 0.04, -0.5, 0.12 * u, 0.7);
-  L.put(n + 1, a * 0.5 - 0.04, -0.5, 0.12 * u, 0.7);
+}
+
+/** Normalize a 2D tube-area estimate, not actual 3D volume or overlap-union area. */
+function normalizeWidth(L, ctx, budget = 1) {
+  let linear = 0;
+  for (let i = 0; i < ANCHORED - 1; i++) {
+    const length = Math.hypot(L.x[i + 1] - L.x[i], L.y[i + 1] - L.y[i]);
+    linear += (L.r[i] + L.r[i + 1]) * length;
+  }
+  const closed = Math.hypot(L.x[ANCHORED - 1] - L.x[0], L.y[ANCHORED - 1] - L.y[0]) < 0.001;
+  const cap = closed ? 0 : Math.PI / 2 * (L.r[0] ** 2 + L.r[ANCHORED - 1] ** 2);
+  const target = ctx.aspect * (ctx.mobile ? 0.28 : 0.32) * budget;
+  const scale = 2 * target / (linear + Math.sqrt(linear * linear + 4 * cap * target));
+  for (let i = 0; i < ANCHORED; i++) L.r[i] = Math.max(0.035, Math.min(0.30, L.r[i] * scale));
 }
 
 export const LAYOUT_FNS = { intro, about, work, thread, drip, contact };
@@ -139,6 +238,7 @@ export function evalLayout(i, ctx) {
   const L = _tmp[i];
   L.clear();
   LAYOUT_FNS[SECTIONS[i]](ctx, L);
+  normalizeWidth(L, ctx, SECTIONS[i] === 'intro' ? (ctx.mobile ? 1.05 : 1.25) : 1);
   return L;
 }
 
@@ -150,17 +250,21 @@ const smooth = (t) => t * t * (3 - 2 * t);
  * instead of flying across the screen.
  */
 export function blendInto(A, B, t, sim, orb) {
-  const s = smooth(Math.min(Math.max(t, 0), 1));
+  const progress = Math.min(Math.max(t, 0), 1);
+  const s = smooth(progress);
   for (let i = 0; i < ANCHORED; i++) {
+    const lead = 0.5 - i / (ANCHORED - 1);
+    const pos = smooth(Math.min(Math.max(progress + Math.sin(Math.PI * progress) * lead * 0.32, 0), 1));
     const ra = A.r[i], rb = B.r[i];
     let xa = A.x[i], ya = A.y[i], xb = B.x[i], yb = B.y[i];
     if (ra <= 0 && rb > 0) { xa = xb; ya = yb; }
     if (rb <= 0 && ra > 0) { xb = xa; yb = ya; }
-    sim.anchorX[i] = xa + (xb - xa) * s;
-    sim.anchorY[i] = ya + (yb - ya) * s;
+    sim.anchorX[i] = xa + (xb - xa) * pos;
+    sim.anchorY[i] = ya + (yb - ya) * pos;
     sim.anchorR[i] = ra + (rb - ra) * s;
     sim.anchorK[i] = A.k[i] + (B.k[i] - A.k[i]) * s;
     sim.anchorDrip[i] = A.drip[i] + (B.drip[i] - A.drip[i]) * s;
+    sim.anchorJoin[i] = A.join[i] + (B.join[i] - A.join[i]) * s;
   }
   const o = orb;
   o.setTarget({

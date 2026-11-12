@@ -36,6 +36,11 @@ export const DEFAULTS = {
   wobbleZeta: 0.14,
   cohesion: 2.4,
   cohRange: 1.9, // x (ri + rj)
+  chainViscosity: 3.0,
+  chainTension: 8.0,
+  chainForceMax: 32,
+  joinTau: 0.22,
+  singlePool: false,
   repulsion: 16,
   repRange: 0.55, // x (ri + rj), free droplets only
   entrain: 3.6, // pointer drags metal along its velocity
@@ -81,7 +86,8 @@ export class LiquidSim {
     this.fx = F(); this.fy = F();
     this.forced = F(); // extra stretch (drips)
     // layout inputs for the anchored slots
-    this.anchorX = F(); this.anchorY = F(); this.anchorR = F(); this.anchorK = F(); this.anchorDrip = F();
+    this.anchorX = F(); this.anchorY = F(); this.anchorR = F(); this.anchorK = F(); this.anchorDrip = F(); this.anchorJoin = F();
+    this.join = F();
     this.dripPhase = F();
     this.dripGrow = F();
     this.ripples = [];
@@ -91,6 +97,7 @@ export class LiquidSim {
     this.splitCd = 0;
     this._pointerWasDown = false;
     this._ptrPrev = null;
+    this._poolContact = false; this.poolContactCd = 0;
     this.stats = { merges: 0, drops: 0, splits: 0 };
     this.reset(true);
   }
@@ -102,18 +109,26 @@ export class LiquidSim {
   /** Scatter anchored blobs so the first frames gather into the layout (the intro). */
   reset(scatter = true) {
     for (let i = 0; i < MAX_BLOBS; i++) {
-      this.x[i] = scatter ? (this.rng() - 0.5) * this.aspect * 1.3 : 0;
-      this.y[i] = scatter ? (this.rng() - 0.5) * 1.3 : 0;
+      if (scatter && this.p.singlePool && i < ANCHORED) {
+        const q = i / (ANCHORED - 1);
+        this.x[i] = this.anchorX[i] + (0.27 + 0.17 * Math.sin(q * TAU * 0.95 - 1.05)) * this.aspect;
+        this.y[i] = this.anchorY[i] + 0.44 - q * 0.88;
+      } else {
+        this.x[i] = scatter ? (this.rng() - 0.5) * this.aspect * 1.3 : 0;
+        this.y[i] = scatter ? (this.rng() - 0.5) * 1.3 : 0;
+      }
       this.vx[i] = this.vy[i] = 0;
       this.r[i] = 0; this.rT[i] = 0;
       this.wob[i] = this.wobV[i] = 0;
       this.stretch[i] = 0; this.dirx[i] = 1; this.diry[i] = 0;
       this.grav[i] = 0;
       this.anchorK[i] = 1;
+      this.anchorJoin[i] = this.join[i] = 0;
       this.dripPhase[i] = this.rng();
       this.dripGrow[i] = this.rng() * 0.6;
     }
     this.ripples.length = 0;
+    this._poolContact = false; this.poolContactCd = 0;
   }
 
   emitRipple(x, y, amp) {
@@ -128,6 +143,7 @@ export class LiquidSim {
   }
 
   _spawn(x, y, vx, vy, r, grav) {
+    if (this.p.singlePool) return -1;
     const i = this._freeSlot();
     if (i < 0) return -1;
     this.x[i] = x; this.y[i] = y; this.vx[i] = vx; this.vy[i] = vy;
@@ -160,6 +176,14 @@ export class LiquidSim {
     const n = MAX_BLOBS;
     const calm = this.calm;
     this.time += h;
+    if (p.singlePool) for (let i = FREE0; i < FREE0 + FREE_N; i++) this._kill(i);
+    const joinTau = Number.isFinite(p.joinTau) ? clamp(p.joinTau, 0.01, 2) : DEFAULTS.joinTau;
+    const joinA = 1 - Math.exp(-h / joinTau);
+    for (let i = 0; i < ANCHORED - 1; i++) {
+      const target = Number.isFinite(this.anchorJoin[i]) ? clamp(this.anchorJoin[i], 0, 1) : 0;
+      this.join[i] += (target - this.join[i]) * joinA;
+    }
+    this.join[ANCHORED - 1] = 0;
 
     // pointer kinematics
     let ptr = null;
@@ -184,7 +208,7 @@ export class LiquidSim {
     // 1. forces
     const fx = this.fx, fy = this.fy;
     fx.fill(0); fy.fill(0);
-    const zeta = calm ? 1.0 : p.zeta;
+    const zeta = calm || p.singlePool ? 1.0 : p.zeta;
     const freqScale = calm ? 1.5 : 1.0;
 
     for (let i = 0; i < ANCHORED; i++) {
@@ -215,6 +239,7 @@ export class LiquidSim {
       for (let j = i + 1; j < n; j++) {
         const rj = this.r[j];
         if (rj < MIN_R || j === POINTER) continue;
+        if (p.singlePool && i < ANCHORED && j < ANCHORED) continue;
         const dx = this.x[j] - this.x[i], dy = this.y[j] - this.y[i];
         const d2 = dx * dx + dy * dy;
         const s = ri + rj;
@@ -234,6 +259,35 @@ export class LiquidSim {
         const mi = ri * ri, mj = rj * rj, mt = mi + mj;
         fx[i] += nx * f * (mj / mt); fy[i] += ny * f * (mj / mt);
         fx[j] -= nx * f * (mi / mt); fy[j] -= ny * f * (mi / mt);
+      }
+    }
+
+    // Joined neighbors share bounded axial tension and viscosity along the layout strand.
+    if (!calm) {
+      const tension = (Number.isFinite(p.chainTension) ? clamp(p.chainTension, 0, 64) : DEFAULTS.chainTension) * (p.singlePool ? 0.65 : 1);
+      const viscosity = (Number.isFinite(p.chainViscosity) ? clamp(p.chainViscosity, 0, 64) : DEFAULTS.chainViscosity) * (p.singlePool ? 1.5 : 1);
+      const forceMax = Number.isFinite(p.chainForceMax) ? clamp(p.chainForceMax, 0, 128) : DEFAULTS.chainForceMax;
+      const relMax = Math.max(p.vmax || DEFAULTS.vmax, 1) * 2;
+      for (let i = 0; i < ANCHORED - 1; i++) {
+        const j = i + 1;
+        const weight = Number.isFinite(this.join[i]) ? clamp(this.join[i], 0, 1) : 0;
+        const ri = this.r[i], rj = this.r[j];
+        if (weight <= 1e-4 || ri < MIN_R || rj < MIN_R) continue;
+        const dx = this.x[j] - this.x[i], dy = this.y[j] - this.y[i];
+        const d = Math.hypot(dx, dy);
+        if (!Number.isFinite(d) || d < 1e-6) continue;
+        const nx = dx / d, ny = dy / d;
+        const ax = this.anchorX[j] - this.anchorX[i], ay = this.anchorY[j] - this.anchorY[i];
+        const anchorDistance = Math.hypot(ax, ay);
+        const rest = Number.isFinite(anchorDistance) ? anchorDistance : d;
+        const extension = clamp(d - rest, -2, 2);
+        const relativeX = clamp(this.vx[j] - this.vx[i], -relMax, relMax);
+        const relativeY = clamp(this.vy[j] - this.vy[i], -relMax, relMax);
+        const forceX = clamp((tension * extension * nx + viscosity * relativeX) * weight, -forceMax, forceMax);
+        const forceY = clamp((tension * extension * ny + viscosity * relativeY) * weight, -forceMax, forceMax);
+        const mi = Math.max(ri * ri, MIN_R * MIN_R), mj = Math.max(rj * rj, MIN_R * MIN_R), mt = mi + mj;
+        fx[i] += forceX * (mj / mt); fy[i] += forceY * (mj / mt);
+        fx[j] -= forceX * (mi / mt); fy[j] -= forceY * (mi / mt);
       }
     }
 
@@ -290,6 +344,7 @@ export class LiquidSim {
       if (rp.amp < 0.01 || rp.age > 3) this.ripples.splice(k, 1);
     }
     this.splitCd = Math.max(0, this.splitCd - h);
+    this.poolContactCd = Math.max(0, this.poolContactCd - h);
   }
 
   _reviveBlob(i) {
@@ -304,21 +359,23 @@ export class LiquidSim {
     // the cursor droplet
     const i = POINTER;
     if (ptr) {
-      const rT = 0.034 + 0.045 * Math.min(ptr.speed / 1.6, 1) + (ptr.down ? 0.04 : 0);
+      const rT = p.singlePool ? 0.028 : 0.034 + 0.045 * Math.min(ptr.speed / 1.6, 1) + (ptr.down ? 0.04 : 0);
       if (this.r[i] < MIN_R) { this.x[i] = ptr.x; this.y[i] = ptr.y; this.vx[i] = this.vy[i] = 0; }
       this.r[i] += (rT - this.r[i]) * (1 - Math.exp(-h / 0.12));
-      const w = TAU * 3.2, z = 0.75;
+      const w = TAU * (p.singlePool ? 2.6 : 3.2), z = p.singlePool ? 0.8 : 0.75;
       const ax = w * w * (ptr.x - this.x[i]) - 2 * z * w * this.vx[i];
       const ay = w * w * (ptr.y - this.y[i]) - 2 * z * w * this.vy[i];
       this.vx[i] += ax * h; this.vy[i] += ay * h;
       this.x[i] += this.vx[i] * h; this.y[i] += this.vy[i] * h;
       const sp = Math.hypot(this.vx[i], this.vy[i]);
-      this.stretch[i] += (Math.min(p.stretchMax, sp * p.stretchGain) - this.stretch[i]) * (1 - Math.exp(-h / p.stretchTau));
+      const stretchMax = p.singlePool ? Math.min(p.stretchMax, 0.45) : p.stretchMax;
+      this.stretch[i] += (Math.min(stretchMax, sp * p.stretchGain) - this.stretch[i]) * (1 - Math.exp(-h / p.stretchTau));
       if (sp > 0.04) { this.dirx[i] = this.vx[i] / sp; this.diry[i] = this.vy[i] / sp; }
     } else {
       this.r[i] += (0 - this.r[i]) * (1 - Math.exp(-h / 0.15));
       if (this.r[i] < MIN_R) this.r[i] = 0;
     }
+    this._poolRimContact(ptr);
     if (!ptr) {
       if (this._pointerWasDown) this._pointerWasDown = false;
       return;
@@ -326,18 +383,21 @@ export class LiquidSim {
 
     // press start: shock wave
     if (ptr.down && !this._pointerWasDown) {
-      this.emitRipple(ptr.x, ptr.y, 1.0);
-      for (let b = 0; b < MAX_BLOBS; b++) {
-        if (b === POINTER || this.r[b] < MIN_R) continue;
-        const dx = this.x[b] - ptr.x, dy = this.y[b] - ptr.y;
-        const d = Math.hypot(dx, dy) + 1e-4;
-        const g = Math.exp(-(d * d) / 0.12);
-        this.vx[b] += (dx / d) * 0.9 * g; this.vy[b] += (dy / d) * 0.9 * g;
-        this.wobV[b] += 3.5 * g;
+      if (p.singlePool) this.emitRipple(ptr.x, ptr.y, 0.04);
+      else {
+        this.emitRipple(ptr.x, ptr.y, 1.0);
+        for (let b = 0; b < MAX_BLOBS; b++) {
+          if (b === POINTER || this.r[b] < MIN_R) continue;
+          const dx = this.x[b] - ptr.x, dy = this.y[b] - ptr.y;
+          const d = Math.hypot(dx, dy) + 1e-4;
+          const g = Math.exp(-(d * d) / 0.12);
+          this.vx[b] += (dx / d) * 0.9 * g; this.vy[b] += (dy / d) * 0.9 * g;
+          this.wobV[b] += 3.5 * g;
+        }
       }
     }
     // release: snap-back wobble
-    if (!ptr.down && this._pointerWasDown) {
+    if (!p.singlePool && !ptr.down && this._pointerWasDown) {
       for (let b = 0; b < MAX_BLOBS; b++) {
         if (b === POINTER || this.r[b] < MIN_R) continue;
         const d = Math.hypot(this.x[b] - ptr.x, this.y[b] - ptr.y);
@@ -346,6 +406,10 @@ export class LiquidSim {
     }
     this._pointerWasDown = ptr.down;
 
+    const interaction = p.singlePool ? 0.18 : 1;
+    const pvx = p.singlePool ? clamp(ptr.vx, -1, 1) : ptr.vx;
+    const pvy = p.singlePool ? clamp(ptr.vy, -1, 1) : ptr.vy;
+    const speed = Math.min(ptr.speed, p.singlePool ? 1.2 : 2);
     for (let b = 0; b < MAX_BLOBS; b++) {
       if (b === POINTER || this.r[b] < MIN_R) continue;
       const dx = this.x[b] - ptr.x, dy = this.y[b] - ptr.y;
@@ -355,17 +419,18 @@ export class LiquidSim {
       if (g < 0.01) continue;
       const ux = dx / d, uy = dy / d;
       // drag along pointer velocity, push away a little when moving
-      fx[b] += p.entrain * g * ptr.vx + p.poke * g * ux * Math.min(ptr.speed, 2);
-      fy[b] += p.entrain * g * ptr.vy + p.poke * g * uy * Math.min(ptr.speed, 2);
+      fx[b] += interaction * (p.entrain * g * pvx + p.poke * g * ux * speed);
+      fy[b] += interaction * (p.entrain * g * pvy + p.poke * g * uy * speed);
       if (ptr.down) {
         const s2 = sigma * 1.8;
         const g2 = Math.exp(-(d * d) / (s2 * s2));
-        fx[b] -= p.attract * g2 * ux; fy[b] -= p.attract * g2 * uy;
+        fx[b] -= p.attract * (p.singlePool ? 0.12 : 1) * g2 * ux;
+        fy[b] -= p.attract * (p.singlePool ? 0.12 : 1) * g2 * uy;
       }
     }
 
     // shear a droplet off a big blob when swiped fast
-    if (ptr.speed > p.splitSpeed && this.splitCd <= 0) {
+    if (!p.singlePool && ptr.speed > p.splitSpeed && this.splitCd <= 0) {
       let best = -1, bd = 1e9;
       for (let b = 0; b < FREE0; b++) {
         if (this.r[b] < 0.07) continue;
@@ -389,8 +454,48 @@ export class LiquidSim {
     }
   }
 
+  _poolRimContact(ptr) {
+    if (!this.p.singlePool || this.calm || !ptr || this.r[POINTER] < MIN_R) {
+      this._poolContact = false;
+      return;
+    }
+    let bestD = Infinity, bestR = 0, qx = 0, qy = 0, outX = 0, outY = 1;
+    for (let i = 0; i < ANCHORED - 1; i++) {
+      const j = i + 1;
+      const ax = this.x[i], ay = this.y[i], sx = this.x[j] - ax, sy = this.y[j] - ay;
+      const len2 = sx * sx + sy * sy;
+      if (len2 < 1e-10 || !Number.isFinite(len2)) continue;
+      const u = clamp(((ptr.x - ax) * sx + (ptr.y - ay) * sy) / len2, 0, 1);
+      const x = ax + sx * u, y = ay + sy * u, d = Math.hypot(ptr.x - x, ptr.y - y);
+      if (!Number.isFinite(d) || d >= bestD) continue;
+      const len = Math.sqrt(len2);
+      bestD = d;
+      bestR = Math.max(0, this.r[i] + (this.r[j] - this.r[i]) * u);
+      qx = x; qy = y; outX = sy / len; outY = -sx / len;
+    }
+    const touching = bestD <= this.r[POINTER] + bestR + 0.012;
+    const edge = touching && !this._poolContact && this.poolContactCd <= 0;
+    this._poolContact = touching;
+    if (!edge) return;
+
+    const speed = clamp(ptr.speed, 0, 1.2), impact = speed;
+    const vl = Math.hypot(ptr.vx, ptr.vy) || 1;
+    const ix = speed > 0.1 ? ptr.vx / vl : -outX, iy = speed > 0.1 ? ptr.vy / vl : -outY;
+    const sigma = 0.18;
+    const impulse = 0.035 + impact * 0.035;
+    for (let i = 0; i < ANCHORED; i++) {
+      const along = Math.hypot(this.x[i] - qx, this.y[i] - qy);
+      const g = Math.exp(-(along * along) / (sigma * sigma));
+      this.vx[i] += ix * impulse * g;
+      this.vy[i] += iy * impulse * g;
+    }
+    this.emitRipple(qx, qy, clamp(0.03 + speed * 0.025, 0.03, 0.06));
+    this.poolContactCd = 0.45;
+  }
+
   _drips(h) {
     const p = this.p;
+    if (p.singlePool) { this.forced.fill(0); return; }
     for (let i = 0; i < ANCHORED; i++) {
       const rate = this.anchorDrip[i];
       if (rate <= 0 || this.r[i] < 0.04) { this.forced[i] = 0; continue; }
@@ -452,13 +557,19 @@ export class LiquidSim {
     }
   }
 
-  /** Pack render state into two Float32Array(MAX_BLOBS*4): A=(x,y,r,stretch) B=(dirx,diry,0,0). */
+  /** Pack A=(x,y,r,stretch), B=(dirx,diry,join-to-next,anchor rest distance). */
   pack(A, B) {
     for (let i = 0; i < MAX_BLOBS; i++) {
       const r = this.r[i] * (1 + this.wob[i]);
       const o = i * 4;
       A[o] = this.x[i]; A[o + 1] = this.y[i]; A[o + 2] = r > MIN_R ? r : 0; A[o + 3] = this.stretch[i];
-      B[o] = this.dirx[i]; B[o + 1] = this.diry[i]; B[o + 2] = 0; B[o + 3] = 0;
+      B[o] = this.dirx[i]; B[o + 1] = this.diry[i];
+      const weight = i < ANCHORED - 1 && Number.isFinite(this.join[i]) ? clamp(this.join[i], 0, 1) : 0;
+      B[o + 2] = weight;
+      if (weight > 0) {
+        const d = Math.hypot(this.anchorX[i + 1] - this.anchorX[i], this.anchorY[i + 1] - this.anchorY[i]);
+        B[o + 3] = Number.isFinite(d) ? clamp(d, 0.001, 1e30) : 0.001;
+      } else B[o + 3] = 0;
     }
   }
 

@@ -44,7 +44,9 @@ export function createReel(root) {
     const s = sections[i];
     if (!s) return;
     const r = s.getBoundingClientRect();
-    const top = r.top + window.scrollY + r.height / 2 - window.innerHeight / 2;
+    // Tall content should open at its heading rather than halfway down the section.
+    const offset = r.height > window.innerHeight + 1 ? 0 : r.height / 2 - window.innerHeight / 2;
+    const top = r.top + window.scrollY + offset;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
 

@@ -15,6 +15,10 @@ Do phases **in order**. Each phase ends with the acceptance checks; do not start
 - **Accept:** no `[` characters left in shipped HTML; Lighthouse SEO ≥ 95, Accessibility ≥ 95 on desktop; fonts do not cause layout shift (CLS < 0.05).
 
 ## Phase 2 — Visual tuning pass (taste, with screenshots)
+Current owner direction (11 November 2026): keep the metal live throughout the reel, with distinct flowing forms per section and restrained, viscous interaction. Use the Blender still as a material reference, not a hero image or video. The current pass separates a smooth connected silhouette from a damped surface heightfield and chrome reflections; it also protects About copy. See `11-live-metal-research.md`. Owner visual acceptance is still required before moving to Phase 3.
+
+The owner also requested LinkedIn content and photos only inside opened detail popups. Native, progressively enhanced About/Experience/project dialogs provide that content structure without changing the metal engine. This does not complete Phase 5's zoom interaction. LinkedIn was accessed in the signed-in browser on 11 November 2026. Profile-grounded content and three original attachment photos are integrated; photos stay in inert popup templates, with none in the main flow or text-only fallback pages. See `12-profile-content-sources.md` for source coverage, asset provenance and intentionally omitted claims. This profile content pass does not verify the older Lighthouse or full-device acceptance criteria.
+
 Work through `npm run shots` PNGs section by section and fix what looks off. Known candidates:
 - About: the cluster under the orb shows busy interior reflections; try fewer/larger blobs or lower `cohesion` there.
 - Path: beads should neck into a continuous strand; tune count/radius/`k` in `thread()`.

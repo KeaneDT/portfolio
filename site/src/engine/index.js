@@ -1,6 +1,7 @@
 import { LiquidSim, OrbSim } from './sim.js';
 import { Renderer } from './renderer.js';
 import { Quality } from './quality.js';
+import { SurfaceWaves } from './surface.js';
 import { SECTIONS, evalLayout, blendInto } from './layouts.js';
 
 /**
@@ -15,7 +16,8 @@ export class Engine {
     this.renderer = new Renderer(canvas, { preserve: !!opts.preserve });
     this.ok = this.renderer.ok;
     this.error = this.renderer.error;
-    this.sim = new LiquidSim({ seed: opts.seed ?? 7, aspect: 1.6 });
+    this.sim = new LiquidSim({ seed: opts.seed ?? 7, aspect: 1.6, params: { singlePool: true, freq: 0.72 } });
+    this.surface = new SurfaceWaves();
     this.orb = new OrbSim();
     this.quality = new Quality({ min: 0.5, max: opts.maxScale ?? 1, start: opts.startScale ?? 0.85 });
     this.progress = 0;      // continuous section index, wraps in [0, N)
@@ -41,6 +43,9 @@ export class Engine {
   setCalm(b) { this.calm = !!b; this.sim.setCalm(this.calm); }
   setProgress(p) { this.progress = p; }
 
+  /** Four optional sculpture slots, expressed in height-normalized viewport coordinates. */
+  setSculptures(rects, poses) { this.renderer.setSculptures(rects, poses); }
+
   /** pixel coordinates relative to the viewport */
   setPointer(px, py, present, down) {
     const p = this.ptr;
@@ -56,6 +61,7 @@ export class Engine {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.renderer.resize(w, h, this.dpr, this.quality.scale);
     this.sim.setAspect(w / h);
+    this.surface.setAspect(w / h);
   }
 
   _readRects() {
@@ -100,7 +106,8 @@ export class Engine {
 
     const W = this.cssW, H = this.cssH, aspect = W / H;
     this._readRects();
-    const ctx = { aspect, t: this.time, mobile: aspect < 0.9, rects: this.rects };
+    // Calm keeps the authored paths still; pointer and spring motion are reduced by the sim.
+    const ctx = { aspect, t: this.calm ? 0 : this.time, mobile: aspect < 0.9, rects: this.rects };
 
     const N = this.N;
     const p = ((this.progress % N) + N) % N;
@@ -116,6 +123,7 @@ export class Engine {
       down: this.ptr.down,
     };
     this.sim.step(dt, world);
+    this.surface.step(dt, { calm: this.calm, ripples: this.sim.ripples });
     this.orb.step(dt, world, this.ptr.down, this.calm);
     // unwrap the looping progress so the environment never snaps back when the reel wraps
     const d = p - this._pPrev;
@@ -126,7 +134,7 @@ export class Engine {
     if (!skipRender) {
       this.renderer.render({
         time: this.time, scroll: this.scrollAngle, calm: this.calm,
-        ptr: world, sim: this.sim, orb: this.orb,
+        ptr: world, sim: this.sim, orb: this.orb, surface: this.surface,
       });
     }
   }

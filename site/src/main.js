@@ -1,6 +1,8 @@
 import { Engine } from './engine/index.js';
 import { appendHeroClone } from './site/hero-clone.js';
 import { createReel } from './site/reel.js';
+import { initDetails } from './site/details.js';
+import { initSculptures } from './site/sculptures.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('metal');
@@ -26,6 +28,7 @@ const reel = createReel(reelRoot);
 // DOM elements the layouts hug
 engine.bind('cards', document.querySelectorAll('#cards .card'));
 engine.bind('thread', document.querySelectorAll('#tl-line'));
+const sculptures = initSculptures({ engine, calm });
 
 // calm toggle
 const calmBtn = document.getElementById('calm');
@@ -33,6 +36,7 @@ const paintCalm = () => calmBtn.setAttribute('aria-pressed', String(engine.calm)
 paintCalm();
 calmBtn.addEventListener('click', () => {
   engine.setCalm(!engine.calm);
+  sculptures.setCalm(engine.calm);
   paintCalm();
   try { localStorage.setItem('calm', engine.calm ? '1' : '0'); } catch {}
 });
@@ -47,7 +51,7 @@ document.querySelectorAll('[data-go]').forEach((a) => {
 
 // pointer: mouse is "present" while inside the window, touch only while a finger is down
 let down = false;
-const setPtr = (e, present) => engine.setPointer(e.clientX, e.clientY, present, down);
+const setPtr = (e, present) => engine.setPointer(e.clientX, e.clientY, present && !e.target.closest?.('[data-sculpture]'), down);
 addEventListener('pointermove', (e) => setPtr(e, e.pointerType !== 'touch' || down), { passive: true });
 addEventListener('pointerdown', (e) => { down = true; setPtr(e, true); }, { passive: true });
 addEventListener('pointerup', (e) => { down = false; setPtr(e, e.pointerType !== 'touch'); }, { passive: true });
@@ -68,7 +72,15 @@ engine.frame = (now, dt, skip) => {
   baseFrame(now, dt, skip);
 };
 
+const details = initDetails({
+  onOpen: () => { sculptures.setPaused(true); engine.stop(); },
+  onClose: () => { sculptures.setPaused(false); if (!document.hidden) engine.start(); },
+});
+document.addEventListener('visibilitychange', () => {
+  if (details.isOpen) engine.stop();
+});
+
 engine.start();
 
 // debug hook for tests and screenshots only
-if (params.has('debug')) window.__molten = { engine, reel };
+if (params.has('debug')) window.__molten = { engine, reel, sculptures };

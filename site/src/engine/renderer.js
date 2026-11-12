@@ -12,6 +12,8 @@ export class Renderer {
     this.B = new Float32Array(MAX_BLOBS * 4);
     this.R = new Float32Array(MAX_RIPPLES * 4);
     this.o0 = new Float32Array(4); this.o1 = new Float32Array(4); this.o2 = new Float32Array(4);
+    this.sculptRects = new Float32Array(16);
+    this.sculptPoses = new Float32Array(16);
 
     const gl = canvas.getContext('webgl2', {
       antialias: false, alpha: false, depth: false, stencil: false,
@@ -27,6 +29,7 @@ export class Renderer {
 
   _init() {
     const gl = this.gl;
+    this.ok = false;
     const vs = this._shader(gl.VERTEX_SHADER, VERT);
     const fs = this._shader(gl.FRAGMENT_SHADER, FRAG);
     if (!vs || !fs) return;
@@ -39,10 +42,23 @@ export class Renderer {
     }
     this.prog = prog;
     this.vao = gl.createVertexArray();
-    const names = ['uRes', 'uTime', 'uScroll', 'uCalm', 'uPtr', 'uPtrOn', 'uA', 'uB', 'uRip', 'uO0', 'uO1', 'uO2'];
+    const names = ['uRes', 'uTime', 'uCalm', 'uA', 'uB', 'uRip', 'uO0', 'uO1', 'uO2', 'uPoolOn', 'uSurfaceNormals'];
     this.u = {};
     for (const n of names) this.u[n] = gl.getUniformLocation(prog, n);
+    this.u.uSculptRect = gl.getUniformLocation(prog, 'uSculptRect[0]');
+    this.u.uSculptPose = gl.getUniformLocation(prog, 'uSculptPose[0]');
+    // Packed 16-bit slopes in RGBA8 work with core WebGL2 linear filtering.
+    this.surfaceTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.surfaceTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 0, 128, 0]));
+    this.surfaceSize = 1;
+    this.surfaceVersion = -1;
     this.ok = true;
+    this.error = null;
   }
 
   _shader(type, src) {
@@ -66,28 +82,47 @@ export class Renderer {
     }
   }
 
-  render({ time, scroll, calm, ptr, sim, orb }) {
+  setSculptures(rects, poses) {
+    this.sculptRects.set(rects);
+    this.sculptPoses.set(poses);
+  }
+
+  render({ time, calm, sim, orb, surface }) {
     if (!this.ok || this.lost) return;
     const gl = this.gl, u = this.u;
     sim.pack(this.A, this.B);
     sim.packRipples(this.R);
     orb.pack(this.o0, this.o1, this.o2);
 
+    const poolOn = sim.p.singlePool === true;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.surfaceTexture);
+    if (surface && surface.version !== this.surfaceVersion) {
+      if (surface.size !== this.surfaceSize) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, surface.size, surface.size, 0, gl.RGBA, gl.UNSIGNED_BYTE, surface.data);
+        this.surfaceSize = surface.size;
+      } else {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, surface.size, surface.size, gl.RGBA, gl.UNSIGNED_BYTE, surface.data);
+      }
+      this.surfaceVersion = surface.version;
+    }
+
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(this.prog);
     gl.bindVertexArray(this.vao);
     gl.uniform2f(u.uRes, this.canvas.width, this.canvas.height);
     gl.uniform1f(u.uTime, time);
-    gl.uniform1f(u.uScroll, scroll);
     gl.uniform1f(u.uCalm, calm ? 1 : 0);
-    gl.uniform2f(u.uPtr, ptr.x, ptr.y);
-    gl.uniform1f(u.uPtrOn, ptr.present ? 1 : 0);
+    gl.uniform1f(u.uPoolOn, poolOn ? 1 : 0);
+    gl.uniform1i(u.uSurfaceNormals, 0);
     gl.uniform4fv(u.uA, this.A);
     gl.uniform4fv(u.uB, this.B);
     gl.uniform4fv(u.uRip, this.R);
     gl.uniform4fv(u.uO0, this.o0);
     gl.uniform4fv(u.uO1, this.o1);
     gl.uniform4fv(u.uO2, this.o2);
+    gl.uniform4fv(u.uSculptRect, this.sculptRects);
+    gl.uniform4fv(u.uSculptPose, this.sculptPoses);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }
